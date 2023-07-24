@@ -4,8 +4,11 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 import faiss
+from flask import Flask, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Load and preprocess data
 images_df = pd.read_csv('./images.csv')
@@ -108,9 +111,17 @@ def recommend_random_products(index, k=6):
 
     recommended_product_indices = set(nn_indices.flatten())
 
-    recommended_product_names = [merged_df.iloc[idx]['productDisplayName'] for idx in recommended_product_indices]
+    recommended_products = []
+    for idx in recommended_product_indices:
+        product_info = {
+            'id': int(merged_df.iloc[idx]['id']),
+            'name': merged_df.iloc[idx]['productDisplayName'],
+            'link': merged_df.iloc[idx]['link']
+        }
+        recommended_products.append(product_info)
 
-    return recommended_product_names
+    return recommended_products
+
 
 
 # Define Flask API routes

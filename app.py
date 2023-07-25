@@ -6,9 +6,15 @@ from sklearn.decomposition import TruncatedSVD
 import faiss
 from flask import Flask, jsonify
 from flask_cors import CORS
+# from nltk.corpus import stopwords
+import string
+
+# Download stopwords from NLTK
+# stop_words = set(stopwords.words('english'))
 
 app = Flask(__name__)
-CORS(app)
+cors=CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Load and preprocess data
 images_df = pd.read_csv('./images.csv')
@@ -44,21 +50,37 @@ num_unique_links = merged_df['link'].nunique()
 
 num_rows = merged_df.shape[0]
 
-merged_df = merged_df.drop_duplicates(subset='link', keep='first')
+# merged_df = merged_df.drop_duplicates(subset='link', keep='first')
 
 num_rows_after_removal = merged_df.shape[0]
 
 num_rows = merged_df.shape[0]
 
+
+# def preprocess_text(text):
+#     # Lowercase the text
+#     text = text.lower()
+#     # Remove punctuation
+#     text = text.translate(str.maketrans('', '', string.punctuation))
+#     # Remove stopwords
+#     text = " ".join([word for word in text.split() if word not in stop_words])
+#     return text
+
+# merged_df['articleType'] = merged_df['articleType'].apply(preprocess_text)
+# merged_df['baseColour'] = merged_df['baseColour'].apply(preprocess_text)
+# merged_df['season'] = merged_df['season'].apply(preprocess_text)
+# merged_df['usage'] = merged_df['usage'].apply(preprocess_text)
+# merged_df['companyName'] = merged_df['companyName'].apply(preprocess_text)
+
 merged_df['companyName'] = merged_df['productDisplayName'].str.split().str[0]
 
-merged_df['combined_features'] = merged_df['articleType'] + ' ' + merged_df['baseColour'] + ' ' + merged_df['season'] + ' ' + merged_df['year'].astype(str) + ' ' + merged_df['usage'] + ' ' + merged_df['companyName']
+merged_df['combined_features'] = merged_df['masterCategory'] + ' ' + merged_df['gender'] + ' ' + merged_df['subCategory'] + ' ' + merged_df['articleType'] + ' ' + merged_df['baseColour'] + ' ' + merged_df['season'] + ' ' + merged_df['usage'] + ' ' + merged_df['companyName']
 
 tfidf_vectorizer = TfidfVectorizer()
 tfidf_matrix = tfidf_vectorizer.fit_transform(merged_df['combined_features'])
 
 num_components = 100
-svd = TruncatedSVD(n_components=num_components)
+svd = TruncatedSVD(n_components=num_components, random_state=42)
 reduced_tfidf_matrix = svd.fit_transform(tfidf_matrix)
 
 index = faiss.IndexFlatIP(num_components)
@@ -70,12 +92,22 @@ def get_recommendations(product_name, index, k=6):
 
     _, nn_indices = index.search(query_vector.reshape(1, -1), k)
 
-    recommended_products = [{'name': merged_df.iloc[idx]['productDisplayName'], 'id': int(merged_df.iloc[idx]['id'])} for idx in nn_indices[0][1:]]
+    recommended_products = [{'name': merged_df.iloc[idx]['productDisplayName'], 'id': int(merged_df.iloc[idx]['id']),'link': merged_df.iloc[idx]['link']} for idx in nn_indices[0][1:]]
+
+    return recommended_products
+
+def get_recommendations_by_id(product_id, index, k=6):
+    product_idx = merged_df[merged_df['id'] == product_id].index.tolist()[0]
+    query_vector = reduced_tfidf_matrix[product_idx]
+
+    _, nn_indices = index.search(query_vector.reshape(1, -1), k)
+
+    recommended_products = [{'name': merged_df.iloc[idx]['productDisplayName'], 'id': int(merged_df.iloc[idx]['id']),'link': merged_df.iloc[idx]['link']} for idx in nn_indices[0][1:]]
 
     return recommended_products
 
 
-def get_unique_recommendations(product_name, index, k=10):
+def get_unique_recommendations(product_name, index, k=20):
     recommendations = get_recommendations(product_name, index, k)
 
     recommendations = [rec for rec in recommendations if rec['name'] != product_name]

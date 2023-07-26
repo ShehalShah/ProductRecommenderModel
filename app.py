@@ -17,9 +17,9 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 CORS(app)
 
-CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
+# CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
 
-CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
+# CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
 
 
 
@@ -265,7 +265,6 @@ def set_cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = '*'
     return response
 
-# ... (rest of your code remains unchanged)
 
 if __name__ == '__main__':
     del styles_df, images_df, tfidf_matrix,  svd, tfidf_vectorizer

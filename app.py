@@ -17,9 +17,9 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 CORS(app)
 
-# CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
+CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
 
-# CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
+CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
 
 
 
@@ -184,12 +184,22 @@ def gget_unique_recommendations():
     data = request.get_json()
     product_name = data['product_name']
     unique_recommendations = get_unique_recommendations(product_name, index)
-    return jsonify(unique_recommendations)
+    response = jsonify(unique_recommendations)
+
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', '*')
+
+    return response
 
 @app.route('/recommend_by_category', methods=['POST', 'OPTIONS'])
 def rrecommend_by_category():
     if request.method == 'OPTIONS':
-        return jsonify()
+        response = jsonify()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', '*')
+        return response
 
     else:
         data = request.get_json()
@@ -213,6 +223,40 @@ def recommend_by_category_preflight():
     response = jsonify()
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     return response
+
+def get_personalized_recommendations(user_watchlist, user_search_history, user_clicked_products, index, k=6):
+    user_preferences = user_watchlist + user_search_history + user_clicked_products
+
+    product_indices = merged_df[merged_df['id'].isin(user_preferences)].index.tolist()
+
+    _, nn_indices = index.search(reduced_tfidf_matrix[product_indices], k)
+
+    recommended_product_indices = set(nn_indices.flatten())
+
+    recommended_products = []
+    for idx in recommended_product_indices:
+        product_info = {
+            'id': int(merged_df.iloc[idx]['id']),
+            'name': merged_df.iloc[idx]['productDisplayName'],
+            'link': merged_df.iloc[idx]['link']
+        }
+        recommended_products.append(product_info)
+
+    return recommended_products[:k]
+
+@app.route('/personalized_recommendations', methods=['POST'])
+def get_user_personalized_recommendations():
+    data = request.get_json()
+    user_watchlist = data.get('watchlist', [])
+    user_search_history = data.get('search_history', [])
+    user_clicked_products = data.get('clicked_products', [])
+
+    recommendations = get_personalized_recommendations(
+        user_watchlist, user_search_history, user_clicked_products, index
+    )
+
+    return jsonify(recommendations)
+
 
 @app.after_request
 def set_cors_headers(response):

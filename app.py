@@ -7,14 +7,21 @@ import faiss
 from flask import Flask, jsonify
 from flask_cors import CORS
 # from nltk.corpus import stopwords
-import string
+# import string
 
 # Download stopwords from NLTK
 # stop_words = set(stopwords.words('english'))
 
 app = Flask(__name__)
-cors=CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
+
+CORS(app)
+
+# CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
+
+# CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
+
+
 
 # Load and preprocess data
 images_df = pd.read_csv('./images.csv')
@@ -129,11 +136,19 @@ def recommend_by_category(category, index, k=6):
 
     recommended_product_indices = set(nn_indices.flatten())
 
-    recommended_product_names = [merged_df.iloc[idx]['productDisplayName'] for idx in recommended_product_indices]
+    recommended_products = []
+    for idx in recommended_product_indices:
+        product_info = {
+            'id': int(merged_df.iloc[idx]['id']),
+            'name': merged_df.iloc[idx]['productDisplayName'],
+            'link': merged_df.iloc[idx]['link']
+        }
+        recommended_products.append(product_info)
 
-    recommended_product_names = [name for name in recommended_product_names if merged_df.loc[merged_df['productDisplayName'] == name, 'articleType'].values[0] == category]
+    recommended_products = [rec for rec in recommended_products if merged_df.loc[merged_df['productDisplayName'] == rec['name'], 'articleType'].values[0] == category]
 
-    return recommended_product_names[:5]
+    return recommended_products[:5]
+
 
 
 def recommend_random_products(index, k=6):
@@ -171,17 +186,44 @@ def gget_unique_recommendations():
     unique_recommendations = get_unique_recommendations(product_name, index)
     return jsonify(unique_recommendations)
 
-@app.route('/recommend_by_category', methods=['POST'])
+@app.route('/recommend_by_category', methods=['POST', 'OPTIONS'])
 def rrecommend_by_category():
-    data = request.get_json()
-    category = data['category']
-    recommended_product_names = recommend_by_category(category, index)
-    return jsonify(recommended_product_names)
+    if request.method == 'OPTIONS':
+        return jsonify()
+
+    else:
+        data = request.get_json()
+        category = data['category']
+        recommended_product_names = recommend_by_category(category, index)
+        response = jsonify(recommended_product_names)
+
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', '*')
+
+    return response
 
 @app.route('/random_recommendations', methods=['GET'])
 def get_random_recommendations():
     random_recommendations = recommend_random_products(index)
     return jsonify(random_recommendations)
 
+@app.route('/recommend_by_category', methods=['OPTIONS'])
+def recommend_by_category_preflight():
+    response = jsonify()
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    return response
+
+@app.after_request
+def set_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    return response
+
+# ... (rest of your code remains unchanged)
+
 if __name__ == '__main__':
+    del styles_df, images_df, tfidf_matrix,  svd, tfidf_vectorizer
     app.run()
+

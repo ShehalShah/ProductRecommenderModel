@@ -17,9 +17,9 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 CORS(app)
 
-# CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
+CORS(app, resources={r"/*": {"origins": "*", "methods": "*", "allow_headers": ["Content-Type"], "expose_headers": "*"}})
 
-# CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
+CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True, "allow_headers": ["Content-Type"]}})
 
 
 

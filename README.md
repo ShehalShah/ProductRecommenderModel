@@ -1,6 +1,6 @@
 # Product Recommender ML api
 
-This repository contains a Flask-based API that provides product recommendations using content-based filtering. The API uses a machine learning model to suggest similar products based on their textual features, such as category, color, season, and more.
+This repository contains a Flask-based API that provides product recommendations using content-based filtering. The API uses a machine learning model to suggest similar products based on their textual features, such as category, color, season, and Personalized Recommendations for the user based on his behaviour and preferences.
 
 ## Table of Contents
 - [Introduction](#introduction)

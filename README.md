@@ -10,7 +10,6 @@ This repository contains a Flask-based API that provides product recommendations
 - [Getting Started](#getting-started)
 - [Usage](#usage)
 - [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 
